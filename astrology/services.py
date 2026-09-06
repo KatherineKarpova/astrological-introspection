@@ -1,6 +1,8 @@
 from kerykeion import AstrologicalSubjectFactory, ChartDataFactory
 from kerykeion.charts.chart_drawer import ChartDrawer
-
+from kerykeion.settings.config_constants import (
+    TRADITIONAL_ASTROLOGY_ACTIVE_POINTS,
+)
 
 def calculate_birth_chart(data, timezone_name):
     # create a Kerykeion astrological subject from validated birth data
@@ -33,7 +35,8 @@ def calculate_birth_chart(data, timezone_name):
     )
 
 def generate_chart_svg(chart):
-    chart_data = ChartDataFactory.create_natal_chart_data(chart)
+    # traditional active points excludes uranus, neptune, pluto, chiron, and lilith
+    chart_data = ChartDataFactory.create_natal_chart_data(chart, active_points=TRADITIONAL_ASTROLOGY_ACTIVE_POINTS,)
 
     drawer = ChartDrawer(chart_data)
 
