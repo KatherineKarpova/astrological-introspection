@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 {% load static %}
 {% load astrology_tags %}
-
 <html lang="en">
     <head>
         <meta charset="UTF-8">
@@ -19,6 +18,12 @@
     <body>
         <main>
             <h1>Your Birth Chart</h1>
+
+            {% if has_birth_time %}
+                <section class="chart-wheel">
+                    {{ chart_svg|safe }}
+                </section>
+            {% endif %}
 
             <section>
                 <h2>Planets</h2>

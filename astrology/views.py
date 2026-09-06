@@ -2,7 +2,7 @@ from django.conf import settings
 from django.shortcuts import render
 
 from .forms import BirthChartForm
-from .services import calculate_birth_chart
+from .services import calculate_birth_chart, generate_chart_svg
 
 
 # display the birth chart form and calculate after valid submission
@@ -25,8 +25,13 @@ def chart(request):
                 data,
                 data['birth_timezone']
             )
+            chart_svg = None
+            if has_birth_time:
+                chart_svg = generate_chart_svg(chart)
+                
             return render(request, 'astrology/chart.html', {
-                'chart': chart, 
+                'chart': chart,
+                'chart_svg': chart_svg,
                 'has_birth_time': has_birth_time
                 })
     else: 

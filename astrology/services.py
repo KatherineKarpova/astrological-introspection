@@ -1,8 +1,9 @@
-from kerykeion import AstrologicalSubjectFactory
+from kerykeion import AstrologicalSubjectFactory, ChartDataFactory
+from kerykeion.charts.chart_drawer import ChartDrawer
 
 
 def calculate_birth_chart(data, timezone_name):
-    """Create a Kerykeion astrological subject from validated birth data."""
+    # create a Kerykeion astrological subject from validated birth data
 
     birth_date = data["birth_date"]
     birth_time = data["birth_time"]
@@ -30,3 +31,10 @@ def calculate_birth_chart(data, timezone_name):
         zodiac_type="Tropical",
         houses_system_identifier="W",
     )
+
+def generate_chart_svg(chart):
+    chart_data = ChartDataFactory.create_natal_chart_data(chart)
+
+    drawer = ChartDrawer(chart_data)
+
+    return drawer.generate_wheel_only_svg_string()
