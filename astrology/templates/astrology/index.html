@@ -12,8 +12,13 @@
         <h1>Explore what your birth chart reveals about you</h1>
         <p>Discover your tropical, whole-sign birth chart and ask questions about your placements.</p>
         <div>
-            <form action="/submit_form" method="post">
+            <form action="{% url 'astrology:index' %}" method="post">
                 {% csrf_token %}
+                {% if form.errors %}
+                <div role="alert">
+                    {{ form.errors }}
+                </div>
+                {% endif %}
                 <labe lfor="name">Name:</label>
                 <input type="text" id="name" name="name"><br>
                 <fieldset>
