@@ -2,28 +2,56 @@
 {% load static %}
 {% load astrology_tags %}
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta
-            name="viewport"
-            content="width=device-width, initial-scale=1.0"
-        >
-        <link
-            rel="stylesheet"
-            href="{% static 'astrology/style.css' %}"
-        >
-        <title>Your Birth Chart</title>
-    </head>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="{% static 'astrology/style.css' %}">
+
+    <title>Your Birth Chart</title>
+    
+</head>
 
     <body>
         <main>
             <h1>Your Birth Chart</h1>
 
             {% if has_birth_time %}
-                <section class="chart-wheel">
+                <section class="chart-display">
+
+                <div class="chart-wheel">
                     {{ chart_svg|safe }}
-                </section>
+                </div>
+                <!-- put a key for what each symbol means to be shown aside the wheel image-->
+                <aside class="chart-key">
+                    <h2>Chart Symbols</h2>
+
+                    <h3>Planets</h3>
+                    <p><span class="glyph">☉</span> Sun</p>
+                    <p><span class="glyph">☽</span> Moon</p>
+                    <p><span class="glyph">☿</span> Mercury</p>
+                    <p><span class="glyph">♀</span> Venus</p>
+                    <p><span class="glyph">♂</span> Mars</p>
+                    <p><span class="glyph">♃</span> Jupiter</p>
+                    <p><span class="glyph">♄</span> Saturn</p>
+
+                    <h3>Lunar Nodes</h3>
+                    <p><span class="glyph">☊</span> North Node</p>
+                    <p><span class="glyph">☋</span> South Node</p>
+
+                    {% if has_birth_time %}
+                        <h3>Angles</h3>
+                        <p><strong>ASC</strong> Ascendant</p>
+                        <p><strong>DSC</strong> Descendant</p>
+                        <p><strong>MC</strong> Midheaven</p>
+                        <p><strong>IC</strong> Imum Coeli</p>
+                    {% endif %}
+                </aside>
+
+            </section>
+
             {% endif %}
+            
 
             <section>
                 <h2>Planets</h2>

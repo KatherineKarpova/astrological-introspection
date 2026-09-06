@@ -1,0 +1,35 @@
+.chart-display {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 30px;
+}
+
+.chart-wheel {
+    width: 600px;
+    flex: 0 0 600px;
+}
+
+.chart-wheel > svg {
+    display: block;
+    width: 600px !important;
+    height: auto !important;
+    max-width: 600px !important;
+}
+
+.chart-key {
+    width: 200px;
+    flex: 0 0 200px;
+}
+
+.chart-key p {
+    margin: 0.4rem 0;
+}
+
+.glyph {
+    display: inline-block;
+    width: 2rem;
+    font-size: 1.4rem;
+    text-align: center;
+}
