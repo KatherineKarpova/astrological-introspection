@@ -7,17 +7,22 @@ def calculate_birth_chart(data, timezone_name):
     birth_date = data["birth_date"]
     birth_time = data["birth_time"]
 
+    # use 12pm as birth time if unknown, but hide ascendents and houses from display
     if birth_time is None:
-        raise ValueError("A known birth time is required to calculate the chart.")
+        hour = 12
+        minute = 0
+    else:
+        hour = birth_time.hour
+        minute = birth_time.minute
 
     return AstrologicalSubjectFactory.from_birth_data(
         name=data.get("name") or "Your Chart",
         year=birth_date.year,
         month=birth_date.month,
         day=birth_date.day,
-        hour=birth_time.hour,
-        minute=birth_time.minute,
-        seconds=birth_time.second,
+        hour=hour,
+        minute=minute,
+        seconds=0,
         lat=data["latitude"],
         lng=data["longitude"],
         tz_str=timezone_name,

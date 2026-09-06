@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 {% load static %}
+{% load astrology_tags %}
 <html lang="en">
     <head>
         <meta charset="UTF-8">
@@ -12,7 +13,7 @@
         <h1>Explore what your birth chart reveals about you</h1>
         <p>Discover your tropical, whole-sign birth chart and ask questions about your placements.</p>
         <div>
-            <form action="{% url 'astrology:index' %}" method="post">
+            <form action="{% url 'astrology:chart' %}" method="post">
                 {% csrf_token %}
                 {% if form.errors %}
                 <div role="alert">

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+{% load static %}
+{% load astrology_tags %}
+
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0"
+        >
+        <link
+            rel="stylesheet"
+            href="{% static 'astrology/style.css' %}"
+        >
+        <title>Your Birth Chart</title>
+    </head>
+
+    <body>
+        <main>
+            <h1>Your Birth Chart</h1>
+
+            <section>
+                <h2>Planets</h2>
+
+                <p>☉ Sun: {{ chart.sun.sign|full_sign }} {{ chart.sun.position|floatformat:2 }}°</p>
+                <p>☽ Moon: {{ chart.moon.sign|full_sign }} {{ chart.moon.position|floatformat:2 }}°</p>
+                <p>☿ Mercury: {{ chart.mercury.sign|full_sign }} {{ chart.mercury.position|floatformat:2 }}°</p>
+                <p>♀ Venus: {{ chart.venus.sign|full_sign }} {{ chart.venus.position|floatformat:2 }}°</p>
+                <p>♂ Mars: {{ chart.mars.sign|full_sign }} {{ chart.mars.position|floatformat:2 }}°</p>
+                <p>♃ Jupiter: {{ chart.jupiter.sign|full_sign }} {{ chart.jupiter.position|floatformat:2 }}°</p>
+                <p>♄ Saturn: {{ chart.saturn.sign|full_sign }} {{ chart.saturn.position|floatformat:2 }}°</p>
+                <p>♅ Uranus: {{ chart.uranus.sign|full_sign }} {{ chart.uranus.position|floatformat:2 }}°</p>
+                <p>♆ Neptune: {{ chart.neptune.sign|full_sign }} {{ chart.neptune.position|floatformat:2 }}°</p>
+                <p>♇ Pluto: {{ chart.pluto.sign|full_sign }} {{ chart.pluto.position|floatformat:2 }}°</p>
+            </section>
+
+            {% if has_birth_time %}
+                <section>
+                    <h2>Angles</h2>
+
+                    <p>ASC Ascendant: {{ chart.ascendant.sign|full_sign }} {{ chart.ascendant.position|floatformat:2 }}°</p>
+                    <p>DSC Descendant: {{ chart.descendant.sign|full_sign }} {{ chart.descendant.position|floatformat:2 }}°</p>
+                    <p>MC Midheaven: {{ chart.medium_coeli.sign|full_sign }} {{ chart.medium_coeli.position|floatformat:2 }}°</p>
+                    <p>IC Imum Coeli: {{ chart.imum_coeli.sign|full_sign }} {{ chart.imum_coeli.position|floatformat:2 }}°</p>
+                </section>
+            {% endif %}
+
+            <a href="{% url 'astrology:index' %}">
+                Calculate another chart
+            </a>
+        </main>
+    </body>
+</html>
