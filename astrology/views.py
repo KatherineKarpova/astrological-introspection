@@ -25,10 +25,8 @@ def chart(request):
                 data,
                 data['birth_timezone']
             )
-            chart_svg = None
-            if has_birth_time:
-                chart_svg = generate_chart_svg(chart)
-                
+            chart_svg = generate_chart_svg(chart, show_houses=has_birth_time)
+
             return render(request, 'astrology/chart.html', {
                 'chart': chart,
                 'chart_svg': chart_svg,

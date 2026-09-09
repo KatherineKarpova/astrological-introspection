@@ -16,7 +16,7 @@
         <main>
             <h1>Your Birth Chart</h1>
 
-            {% if has_birth_time %}
+            {% if chart_svg %}
                 <section class="chart-display">
 
                 <div class="chart-wheel">
@@ -34,17 +34,17 @@
                     <p><span class="glyph">♂</span> Mars</p>
                     <p><span class="glyph">♃</span> Jupiter</p>
                     <p><span class="glyph">♄</span> Saturn</p>
-
+                    <!---->
                     <h3>Lunar Nodes</h3>
                     <p><span class="glyph">☊</span> North Node</p>
                     <p><span class="glyph">☋</span> South Node</p>
-
+                    <!---->
                     {% if has_birth_time %}
                         <h3>Angles</h3>
-                        <p><strong>ASC</strong> Ascendant</p>
-                        <p><strong>DSC</strong> Descendant</p>
-                        <p><strong>MC</strong> Midheaven</p>
-                        <p><strong>IC</strong> Imum Coeli</p>
+                        <p><strong>As</strong> Ascendant</p>
+                        <p><strong>Ds</strong> Descendant</p>
+                        <p><strong>Mc</strong> Midheaven</p>
+                        <p><strong>Ic</strong> Imum Coeli</p>
                     {% endif %}
                 </aside>
 
