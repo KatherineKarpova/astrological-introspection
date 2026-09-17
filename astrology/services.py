@@ -27,6 +27,7 @@ def calculate_birth_chart(data, timezone_name):
         hour = birth_time.hour
         minute = birth_time.minute
 
+    # this function creates the chart Kerykeion object from the validated form data 
     return AstrologicalSubjectFactory.from_birth_data(
         name=data.get("name") or "Your Chart",
         year=birth_date.year,
@@ -43,12 +44,16 @@ def calculate_birth_chart(data, timezone_name):
         houses_system_identifier="W",
     )
 
+# this function manipulates the svg string created form 
 def generate_chart_svg(chart, show_houses=True):
     # traditional active points excludes uranus, neptune, pluto, chiron, and lilith
+    # takes the astrological subject object and creates a chart data object specifically to render
     chart_data = ChartDataFactory.create_natal_chart_data(chart, active_points = TRADITIONAL_CHART_POINTS,)
 
+    # creates the drawer/render object from the data object
     drawer = ChartDrawer(chart_data)
 
+    # creates the string with svg markup to display
     svg = drawer.generate_wheel_only_svg_string()
     print(svg[:500])
     # remove houses from made svg if show houses is False, as determined by no birth time given

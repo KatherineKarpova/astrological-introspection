@@ -129,3 +129,11 @@ MAILERS = {
         'BACKEND': 'django.core.mail.backends.console.EmailBackend',
     },
 }
+
+# keep the credential on the server.
+# never put it in a django template or browser javascript.
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+
+# keeping the model configurable lets you change it without
+# rewriting the function that sends chat requests.
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
