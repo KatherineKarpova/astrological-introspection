@@ -26,9 +26,6 @@ def ask_chart_guide(
 ):
     """generate an explanation using calculated facts and recent chat."""
 
-    if not settings.OPENAI_API_KEY:
-        raise ValueError("The chatbot needs an API key.")
-
     # explicit preferences override the model's estimate.
     # automatic mode leaves the level and tone to the instructions.
     if level not in {"auto", "beginner", "technical"}:
@@ -38,8 +35,9 @@ def ask_chart_guide(
         raise ValueError("Invalid conversation tone.")
 
     client = OpenAI(
-        api_key=settings.OPENAI_API_KEY,
-        timeout=35,
+        api_key=settings.AI_API_KEY,
+        base_url=settings.AI_BASE_URL,
+        timeout=settings.AI_TIMEOUT_SECONDS,
         max_retries=0,
     )
 
@@ -77,7 +75,7 @@ def ask_chart_guide(
     ]
 
     completion = client.chat.completions.create(
-        model=settings.OPENAI_MODEL,
+        model=settings.AI_MODEL,
         messages=messages,
 
         # request a machine-readable response so django can separate
@@ -85,11 +83,10 @@ def ask_chart_guide(
         response_format={"type": "json_object"},
 
         # bound response length and the cost of an individual answer.
-        max_completion_tokens=850,
+        max_tokens=850,
 
         # request that this completion not be stored by this feature.
         # this does not mean the provider never processes request data.
-        store=False,
     )
 
     raw_content = completion.choices[0].message.content

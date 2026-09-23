@@ -79,6 +79,51 @@
             <a href="{% url 'astrology:index' %}">
                 Calculate another chart
             </a>
+
+            {% if chat_enabled %}
+            <section class="chat">
+                <h2>Ask the chart guide</h2>
+                <p>This guide uses only the tropical, whole-sign chart facts and the approved historical sources.</p>
+                <div id="chat-log" aria-live="polite"></div>
+                <form id="chat-form" action="{% url 'astrology:chat' %}" method="post">
+                    {% csrf_token %}
+                    <label for="chat-question">Your question</label>
+                    <textarea id="chat-question" name="question" maxlength="2000" required></textarea>
+                    <button type="submit">Ask</button>
+                </form>
+            </section>
+            {% endif %}
         </main>
+        {% if chat_enabled %}
+        <script>
+            const form = document.getElementById("chat-form");
+            const log = document.getElementById("chat-log");
+            form.addEventListener("submit", async (event) => {
+                event.preventDefault();
+                const button = form.querySelector("button");
+                button.disabled = true;
+                const entry = document.createElement("p");
+                try {
+                    const response = await fetch(form.action, {
+                        method: "POST",
+                        body: new FormData(form),
+                        headers: {"X-Requested-With": "XMLHttpRequest"}
+                    });
+                    const data = await response.json();
+                    entry.textContent = response.ok
+                        ? data.answer + (data.reflection ? " " + data.reflection : "")
+                        : data.error;
+                    if (response.ok) form.reset();
+                } catch (error) {
+                    entry.textContent =
+                        "The chat service could not be reached. "
+                        + "Start the configured AI service and try again.";
+                } finally {
+                    log.appendChild(entry);
+                    button.disabled = false;
+                }
+            });
+        </script>
+        {% endif %}
     </body>
 </html>

@@ -1,0 +1,5 @@
+Django>=5.2,<7
+python-dotenv>=1.0
+openai>=1.0
+kerykeion>=4.26,<5
+gunicorn>=23.0

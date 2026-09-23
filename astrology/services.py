@@ -1,12 +1,15 @@
-from kerykeion import AstrologicalSubjectFactory, ChartDataFactory
-from kerykeion.charts.chart_drawer import ChartDrawer
-from kerykeion.settings.config_constants import (
-    TRADITIONAL_ASTROLOGY_ACTIVE_POINTS,
-)
+from kerykeion import AstrologicalSubject, KerykeionChartSVG
 
 # make global array so the 4 angels I want in the chart are included on top of the 7 planets and true nodes in active_points
 TRADITIONAL_CHART_POINTS = [ 
-    *TRADITIONAL_ASTROLOGY_ACTIVE_POINTS,
+    'Sun',
+    'Moon',
+    'Mercury',
+    'Venus',
+    'Mars',
+    'Jupiter',
+    'Saturn',
+    'True_Node',
     'Ascendant',
     'Descendant',
     'Medium_Coeli',
@@ -28,19 +31,18 @@ def calculate_birth_chart(data, timezone_name):
         minute = birth_time.minute
 
     # this function creates the chart Kerykeion object from the validated form data 
-    return AstrologicalSubjectFactory.from_birth_data(
+    return AstrologicalSubject(
         name=data.get("name") or "Your Chart",
         year=birth_date.year,
         month=birth_date.month,
         day=birth_date.day,
         hour=hour,
         minute=minute,
-        seconds=0,
         lat=data["latitude"],
         lng=data["longitude"],
         tz_str=timezone_name,
         online=False,
-        zodiac_type="Tropical",
+        zodiac_type="Tropic",
         houses_system_identifier="W",
     )
 
@@ -48,14 +50,8 @@ def calculate_birth_chart(data, timezone_name):
 def generate_chart_svg(chart, show_houses=True):
     # traditional active points excludes uranus, neptune, pluto, chiron, and lilith
     # takes the astrological subject object and creates a chart data object specifically to render
-    chart_data = ChartDataFactory.create_natal_chart_data(chart, active_points = TRADITIONAL_CHART_POINTS,)
-
-    # creates the drawer/render object from the data object
-    drawer = ChartDrawer(chart_data)
-
-    # creates the string with svg markup to display
-    svg = drawer.generate_wheel_only_svg_string()
-    print(svg[:500])
+    drawer = KerykeionChartSVG(chart, active_points=TRADITIONAL_CHART_POINTS)
+    svg = drawer.makeWheelOnlyTemplate()
     # remove houses from made svg if show houses is False, as determined by no birth time given
     if not show_houses:
         svg = remove_houses_from_svg(svg)
