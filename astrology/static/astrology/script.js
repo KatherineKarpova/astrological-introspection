@@ -9,20 +9,23 @@ if (!geoapifyKey || typeof autocomplete === "undefined") {
         "Geoapify autocomplete is unavailable. Set GEOAPIFY_API_KEY "
         + "and check that the Geoapify script loaded."
     );
-    throw new Error("Geoapify autocomplete is not configured.");
 }
 
-//geoapify widget
-const birthplaceAutocomplete = new autocomplete.GeocoderAutocomplete(
-    document.getElementById("birthplace-autocomplete"),
-    geoapifyKey,
-    {
-        type: "city",
-        placeholder: "Enter your birth city or town",
-        lang: "en",
-        limit: 5
-    }
-);
+let birthplaceAutocomplete;
+if (geoapifyKey && typeof autocomplete !== "undefined") {
+    birthplaceAutocomplete = new autocomplete.GeocoderAutocomplete(
+        document.getElementById("birthplace-autocomplete"),
+        geoapifyKey,
+        {
+            type: "city",
+            placeholder: "Enter your birth city or town",
+            lang: "en",
+            limit: 5
+        }
+    );
+} else {
+    document.getElementById("birthplace-manual").hidden = false;
+}
 
 function clearBirthplace() {
     console.log("Clearing location");
@@ -33,7 +36,7 @@ function clearBirthplace() {
     document.getElementById("birth-timezone").value = "";
 }
 
-birthplaceAutocomplete.on("select", function (location) {
+birthplaceAutocomplete?.on("select", function (location) {
     console.log("Select event received:", location);
     clearBirthplace();
 
@@ -63,3 +66,38 @@ document.getElementById("birthplace-autocomplete")
     .addEventListener("input", clearBirthplace);
 
 console.log("Location listeners ready");
+
+const birthChartForm = document.querySelector("form[action]");
+const birthplaceStatus = document.getElementById("birthplace-status");
+const manualBirthplace = document.getElementById("birthplace-manual");
+
+manualBirthplace.addEventListener("input", clearBirthplace);
+
+function selectedBirthplaceMatches(inputValue) {
+    const selectedName = document.getElementById("birthplace").value.trim();
+    const locationId = document.getElementById("location-id").value.trim();
+    const latitude = document.getElementById("latitude").value;
+    const longitude = document.getElementById("longitude").value;
+    const timezone = document.getElementById("birth-timezone").value.trim();
+    return Boolean(
+        selectedName
+        && selectedName.toLowerCase() === inputValue.trim().toLowerCase()
+        && locationId
+        && latitude
+        && longitude
+        && timezone
+    );
+}
+
+birthChartForm.addEventListener("submit", () => {
+    const locationInput = document.querySelector(
+        "#birthplace-autocomplete .geoapify-autocomplete-input"
+    ) || manualBirthplace;
+    const enteredPlace = locationInput?.value.trim() || "";
+    if (!enteredPlace || selectedBirthplaceMatches(enteredPlace)) {
+        return;
+    }
+    clearBirthplace();
+    document.getElementById("birthplace").value = enteredPlace;
+    birthplaceStatus.textContent = "The entered birthplace will be looked up when you submit.";
+});

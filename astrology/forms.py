@@ -16,17 +16,19 @@ class BirthChartForm(forms.Form):
         input_formats=['%H:%M', '%H:%M:%S'],
     )
 
-    birthplace = forms.CharField(max_length=300)
-    location_id = forms.CharField(max_length=1000)
+    birthplace = forms.CharField(max_length=300, required=False)
+    location_id = forms.CharField(max_length=1000, required=False)
 
-    latitude = forms.FloatField(min_value=-90, max_value=90)
-    longitude = forms.FloatField(min_value=-180, max_value=180)
+    latitude = forms.FloatField(min_value=-90, max_value=90, required=False)
+    longitude = forms.FloatField(min_value=-180, max_value=180, required=False)
 
-    birth_timezone = forms.CharField(max_length=100)
+    birth_timezone = forms.CharField(max_length=100, required=False)
 
     # check if time zone is in a recognized zone
     def clean_birth_timezone(self):
-        timezone_name = self.cleaned_data["birth_timezone"]
+        timezone_name = self.cleaned_data.get("birth_timezone", "")
+        if not timezone_name:
+            return ""
 
         try:
             ZoneInfo(timezone_name)
@@ -59,5 +61,31 @@ class BirthChartForm(forms.Form):
                     )
                 else:
                     cleaned_data["birth_date"] = birth_date
+
+        location_fields = (
+            "location_id",
+            "latitude",
+            "longitude",
+            "birth_timezone",
+        )
+        has_any_location_metadata = any(
+            cleaned_data.get(name) not in (None, "")
+            for name in location_fields
+        )
+        has_complete_location = bool(cleaned_data.get("birthplace")) and all(
+            cleaned_data.get(name) not in (None, "")
+            for name in location_fields
+        )
+        needs_location_lookup = (
+            bool(cleaned_data.get("birthplace"))
+            and not has_any_location_metadata
+        )
+        if has_any_location_metadata and not has_complete_location:
+            self.add_error(
+                None,
+                "We could not verify the selected birthplace. Choose a suggestion or clear the birthplace field.",
+            )
+        cleaned_data["has_birth_location"] = has_complete_location
+        cleaned_data["needs_location_lookup"] = needs_location_lookup
 
         return cleaned_data
