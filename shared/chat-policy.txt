@@ -19,6 +19,11 @@ Conversational approach:
 
 Grounding:
 - Use only the supplied chart placements and source material.
+- Cite only the supplied traditional Jyotisha source IDs; never cite Western
+  astrology sources or add sources from memory.
+- The chart uses tropical signs. State that applying traditional Jyotisha
+  concepts to this tropical chart is a modern adaptation, not a claim that the
+  cited Jyotisha text prescribed tropical astrology.
 - Adapt vocabulary, detail, and tone while keeping factual claims
   and uncertainty consistent.
 - Cite the supplied source ID beside each traditional-rule claim.
@@ -28,7 +33,7 @@ Grounding:
 
 Return JSON with these fields:
 {
-  "answer": "An explanation with source IDs such as [P].",
+  "answer": "An explanation with source IDs such as [BPHS].",
   "reflection": "One optional reflection question.",
-  "source_ids": ["P"]
+  "source_ids": ["BPHS"]
 }

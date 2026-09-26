@@ -8,15 +8,25 @@
         <link rel="stylesheet" href="{% static 'astrology/style.css' %}">
         <title>Astrological Instrospection</title>
     </head>
-    <body>
-        <h1>Explore what your birth chart reveals about you</h1>
-        <p>Discover your tropical, whole-sign birth chart and ask questions about your placements.</p>
-        <div>
+    <body class="site-shell">
+        <main class="page-wrap">
+        <header class="page-heading">
+            <p class="eyebrow">A quieter kind of astrology</p>
+            <h1>Explore your birth chart</h1>
+            <p>Discover your tropical, whole-sign chart and reflect on its traditional symbolism.</p>
+        </header>
+        <section class="form-card">
             <form action="{% url 'astrology:chart' %}" method="post">
                 {% csrf_token %}
                 {% if form.errors %}
-                <div role="alert">
-                    {{ form.errors }}
+                <div role="alert" class="form-errors">
+                    <p>Please correct the following:</p>
+                    {{ form.non_field_errors }}
+                    {% for field in form %}
+                        {% if field.errors %}
+                            <p><strong>{{ field.label }}:</strong> {{ field.errors|join:", " }}</p>
+                        {% endif %}
+                    {% endfor %}
                 </div>
                 {% endif %}
                 <label for="name">Name:</label>
@@ -48,15 +58,24 @@
                         <input type="number" id="birth-year" name="birth_year"
                             min="1900" max="2026" required>
                 </fieldset>
-                <label for="birthplace">Birthplace</label>
-                <!-- using geoapify for visible autocomplete search input-->
+                <label for="birthplace">Birthplace (optional)</label>
                 <div id="birthplace-autocomplete"></div>
-                <!-- location details submitted to Django-->
+                <input
+                    type="text"
+                    id="birthplace-manual"
+                    autocomplete="address-level2"
+                    placeholder="Enter your birth city or town"
+                    hidden
+                >
+                <p id="birthplace-status" class="field-hint" aria-live="polite"></p>
                 <input type="hidden" id="birthplace" name="birthplace">
                 <input type="hidden" id="location-id" name="location_id">
                 <input type="hidden" id="latitude" name="latitude">
                 <input type="hidden" id="longitude" name="longitude">
                 <input type="hidden" id="birth-timezone" name="birth_timezone">
+                <p id="birthplace-help">
+                    Choose a suggested place or enter a city name to calculate houses and angles. Without a birthplace, planetary positions use the entered time as a UTC approximation, or noon UTC if no time is entered. A planet that changed signs during that UTC date will be marked as uncertain.
+                </p>
                 <label for="birth-time">Birth time (optional)</label>
                 <input
                     type="time"
@@ -65,9 +84,20 @@
                     aria-describedby="birth-time-help"
                 >
                 <p id="birth-time-help">
-                    Enter the local time at birth. If unknown, leave blank;
-                    your chart will not include a rising sign or houses.
+                    With a selected birthplace, this is interpreted as local time. Without one, it is treated as a UTC approximation for planetary positions only; houses and angles are omitted.
                 </p>
+                <label class="browser-cache-option" for="save-to-browser">
+                    <input type="checkbox" id="save-to-browser" name="save_to_browser">
+                    Save my chart details in this browser
+                </label>
+                <p class="field-hint">This stores the birth details on this device only, so you can restore the chart in this browser. Do not select this on a shared device.</p>
+                <p id="browser-cache-status" class="field-hint" aria-live="polite"></p>
+                <button id="restore-saved-chart" class="button-secondary" type="button" hidden>
+                    Restore chart saved in this browser
+                </button>
+                <button id="clear-saved-chart" class="button-secondary" type="button" hidden>
+                    Clear chart saved in this browser
+                </button>
                 <button type="submit">Generate my birth chart</button>
             </form>
         </div>
@@ -76,5 +106,82 @@
         {{ geoapify_api_key|json_script:"geoapify-key" }}
 
         <script src="{% static 'astrology/script.js' %}"></script>
+        <script>
+            (() => {
+                const cacheKey = "vedic-chart-form-v1";
+                const form = document.querySelector("form[action]");
+                const saveOption = document.getElementById("save-to-browser");
+                const restoreButton = document.getElementById("restore-saved-chart");
+                const status = document.getElementById("browser-cache-status");
+                let cachedDetails = null;
+
+                try {
+                    const serialized = localStorage.getItem(cacheKey);
+                    if (serialized) {
+                        cachedDetails = JSON.parse(serialized);
+                        if (
+                            cachedDetails
+                            && typeof cachedDetails === "object"
+                            && ["birth_month", "birth_day", "birth_year"].every(
+                                (field) => typeof cachedDetails[field] === "string"
+                            )
+                        ) {
+                            restoreButton.hidden = false;
+                            document.getElementById("clear-saved-chart").hidden = false;
+                        } else {
+                            cachedDetails = null;
+                            localStorage.removeItem(cacheKey);
+                        }
+                    }
+                } catch (error) {
+                    status.textContent = "Browser storage is unavailable here.";
+                }
+
+                form.addEventListener("submit", () => {
+                    if (!saveOption.checked) return;
+                    const data = new FormData(form);
+                    const details = {};
+                    for (const field of [
+                        "name", "birth_month", "birth_day", "birth_year",
+                        "birth_time", "birthplace", "location_id", "latitude",
+                        "longitude", "birth_timezone"
+                    ]) {
+                        details[field] = data.get(field) || "";
+                    }
+                    try {
+                        localStorage.setItem(cacheKey, JSON.stringify(details));
+                        status.textContent = "This chart will be available to restore in this browser.";
+                    } catch (error) {
+                        status.textContent = "Could not save chart details in this browser.";
+                    }
+                });
+
+                restoreButton.addEventListener("click", () => {
+                    if (!cachedDetails) return;
+                    for (const [field, value] of Object.entries(cachedDetails)) {
+                        const input = form.elements.namedItem(field);
+                        if (input) input.value = value;
+                    }
+                    const locationInput = document.querySelector(
+                        "#birthplace-autocomplete .geoapify-autocomplete-input"
+                    ) || document.getElementById("birthplace-manual");
+                    if (locationInput) locationInput.value = cachedDetails.birthplace;
+                    saveOption.checked = true;
+                    form.requestSubmit();
+                });
+
+                document.getElementById("clear-saved-chart").addEventListener("click", () => {
+                    try {
+                        localStorage.removeItem(cacheKey);
+                        cachedDetails = null;
+                        restoreButton.hidden = true;
+                        document.getElementById("clear-saved-chart").hidden = true;
+                        status.textContent = "Saved chart details cleared from this browser.";
+                    } catch (error) {
+                        status.textContent = "Could not clear saved chart details from this browser.";
+                    }
+                });
+            })();
+        </script>
     </body>
 </html>

@@ -1,4 +1,5 @@
 import json
+import re
 from django.conf import settings
 from openai import OpenAI
 
@@ -15,6 +16,215 @@ SOURCES = json.loads(
         settings.BASE_DIR / "shared" / "sources.json"
     ).read_text(encoding="utf-8")
 )
+
+HOUSE_TOPICS = {
+    1: "self, body, and approach",
+    2: "resources, family, and speech",
+    3: "effort, skills, and siblings",
+    4: "home, roots, and foundations",
+    5: "learning, creativity, and children",
+    6: "work, service, and difficulties",
+    7: "partnerships and agreements",
+    8: "shared resources and major change",
+    9: "teachers, meaning, and long journeys",
+    10: "work, responsibility, and public role",
+    11: "friends, networks, and gains",
+    12: "rest, retreat, and letting go",
+}
+
+PLACEMENT_SUMMARY_PROMPT = """Write a concise, personalized explanation of the supplied chart placement.
+Use only the supplied chart facts and the approved ancient Jyotisha text(s).
+Do not cite or refer to Western astrology sources. The chart is calculated in
+the tropical zodiac with whole-sign houses. Be transparent: traditional
+Jyotisha texts such as Brihat Parashara Hora Shastra use a different historical
+zodiac convention, so this app applies Jyotisha concepts to tropical placements
+as a modern adaptation; do not claim the text prescribed tropical astrology.
+Never introduce sidereal recalculations, nakshatras, dashas, or unprovided chart
+facts. Describe astrology as historical symbolism, not scientific prediction.
+Use plain, non-fatalistic language.
+If the placement has "possible_sign_change" facts, explain that its sign is
+uncertain because it may have changed during the UTC birth date. Use the
+listed possible signs and do not present the noon-UTC sign as certain.
+
+First identify the exact supplied placement by its name and sign; do not
+interpret every placement as the Ascendant. Follow these rules for the named
+placement:
+- Ascendant: call it the rising sign (Lagna). Describe how its sign can color
+  outward approach and first impression, as symbolism not a fixed personality
+  fact. Explain that it starts whole-sign house 1 and sets the signs/houses for
+  the rest of the chart. Do not assign it planetary dignity.
+- Descendant: explain the supplied sign as a traditional lens on partnership
+  and one-to-one relating, and that it marks the 7th-house axis opposite Lagna.
+- Medium_Coeli: explain the supplied sign as a lens on public contribution or
+  vocation, and state its calculated whole-sign house; do not assume it is in
+  house 10.
+- Imum_Coeli: explain the supplied sign as a lens on home, roots, and private
+  foundations, and state its calculated whole-sign house; do not assume it is
+  in house 4.
+- Planet: state what the named planet signifies in simple terms, then connect
+  its supplied sign expression with its calculated whole-sign house topic.
+  Explain how those parts modify one another, then finish by stating its
+  supplied sign condition only if the facts say own sign, exalted, or
+  debilitated. Sign condition comes from the sign, not the house. If none
+  applies, omit sign condition entirely. Never say "no special sign condition"
+  or "other sign." Houses 1, 4, 7, and 10 are traditionally angular and more
+  prominent; mention that only when supplied as angular.
+For every placement with a known house, use its exact supplied house number,
+house sign, and house topic. Without a birthplace, state that house and angle
+are unavailable. Without a birthplace, the chart uses the entered time as a
+UTC approximation for planetary positions, or noon UTC if no time was given.
+Explain this limitation once only when relevant.
+Mention possible sign changes supplied in the chart facts and do not assert
+one sign as certain for a planet that crossed signs on that UTC date.
+Without a birth time but with a known birthplace, state that house is unknown.
+Return only 1-3 concise, plain-language sentences as plain text. Do not return
+JSON, quotation marks around the response, markdown fences, citations, or
+source IDs."""
+
+
+def _placement_summary_fallback(placement):
+    name = placement["name"]
+    sign = placement["sign"]
+    house = placement.get("house")
+    topic = placement.get("house_topic")
+    dignities = [
+        condition for condition in placement.get("essential_dignity", [])
+        if condition in {"own sign", "exalted", "debilitated"}
+    ]
+    if name == "Ascendant":
+        sentences = [
+            f"A {sign} Ascendant can color first impressions and outward approach "
+            "with the sign's traditional qualities."
+        ]
+    elif name == "Descendant":
+        sentences = [
+            f"{sign} on the Descendant offers a traditional lens on one-to-one "
+            "relationships and partnership."
+        ]
+    elif name == "Medium_Coeli":
+        sentences = [
+            f"The Midheaven in {sign} can describe a traditional lens on public "
+            "contribution and vocation."
+        ]
+    elif name == "Imum_Coeli":
+        sentences = [
+            f"The Imum Coeli in {sign} can describe a traditional lens on home, "
+            "roots, and private foundations."
+        ]
+    else:
+        planet_themes = {
+            "Sun": "vitality and purpose",
+            "Moon": "feeling and perception",
+            "Mercury": "learning and communication",
+            "Venus": "connection and enjoyment",
+            "Mars": "effort and initiative",
+            "Jupiter": "growth and counsel",
+            "Saturn": "responsibility and perseverance",
+        }
+        themes = planet_themes.get(name, "its traditional themes")
+        sentences = [
+            f"{name} in {sign} brings themes of {themes} into the chart, "
+            "expressed through the sign's traditional qualities."
+        ]
+    if house and topic:
+        sentences.append(
+            f"In whole-sign house {house}, the area of {topic}, those themes "
+            "are especially connected with that part of life."
+        )
+    if dignities:
+        sentences.append(
+            f"Its sign condition is {', '.join(dignities)}."
+        )
+    return " ".join(sentences)
+
+
+def summarize_placement(chart_context, placement):
+    """Generate one source-grounded, plain-language placement summary."""
+    if not isinstance(placement, dict):
+        raise ValueError("Unknown chart placement.")
+
+    client = OpenAI(
+        api_key=settings.AI_API_KEY,
+        base_url=settings.AI_BASE_URL,
+        timeout=settings.AI_TIMEOUT_SECONDS,
+        max_retries=0,
+    )
+    placement_name = placement.get("name")
+    placement_sign = placement.get("sign")
+    if not isinstance(placement_name, str) or not isinstance(placement_sign, str):
+        raise ValueError("The chart placement is missing its name or sign.")
+
+    is_ascendant = placement_name == "Ascendant"
+    target_instructions = (
+        f"The ONLY placement being explained is {placement_name} in {placement_sign}. "
+        + (
+            "This is the Ascendant; explain rising sign and chart structure."
+            if is_ascendant
+            else (
+                "This is NOT the Ascendant. Do not mention Ascendant, rising sign, "
+                "Lagna, or chart ruler. Explain only this named placement."
+            )
+        )
+    )
+    target_chart_facts = {
+        "zodiac": chart_context.get("zodiac"),
+        "house_system": chart_context.get("house_system"),
+    }
+    if is_ascendant:
+        target_chart_facts["whole_sign_houses"] = chart_context.get(
+            "whole_sign_houses",
+            [],
+        )
+
+    completion = client.chat.completions.create(
+        model=settings.AI_MODEL,
+        messages=[
+            {
+                "role": "system",
+                "content": f"{PLACEMENT_SUMMARY_PROMPT}\n\n{target_instructions}",
+            },
+            {
+                "role": "user",
+                "content": json.dumps({
+                    "chart_method": target_chart_facts,
+                    "placement": placement,
+                    "sources": SOURCES,
+                }),
+            },
+        ],
+        max_tokens=300,
+    )
+    raw_content = completion.choices[0].message.content
+    if not isinstance(raw_content, str) or not raw_content.strip():
+        raise ValueError("The model did not return a placement summary.")
+
+    summary = raw_content.strip()
+    if summary.startswith("```") and summary.endswith("```"):
+        summary = summary[3:-3].strip()
+        if summary.startswith("text"):
+            summary = summary[4:].lstrip()
+    if not summary:
+        raise ValueError("The model returned an empty placement summary.")
+    if not is_ascendant:
+        summary_sentences = re.split(r"(?<=[.!?])\s+", summary)
+        summary = " ".join(
+            sentence for sentence in summary_sentences
+            if not re.search(
+                r"\b(ascendant|rising sign|lagna|chart ruler)\b",
+                sentence,
+                flags=re.IGNORECASE,
+            )
+        )
+    if (
+        not summary
+        or not re.search(rf"\b{re.escape(placement_name)}\b", summary, re.IGNORECASE)
+        or not re.search(rf"\b{re.escape(placement_sign)}\b", summary, re.IGNORECASE)
+    ):
+        summary = _placement_summary_fallback(placement)
+
+    return {
+        "summary": summary,
+    }
 
 
 def ask_chart_guide(
@@ -135,7 +345,12 @@ def ask_chart_guide(
     return reply
 
 # provide json dicts for llm to have context for responses
-def build_chart_context(chart, has_birth_time):
+def build_chart_context(
+    chart,
+    has_birth_time,
+    has_birth_location=True,
+    daily_sign_changes=None,
+):
     """convert a kerykeion subject into json-compatible chart facts."""
 
     sign_names = [
@@ -153,6 +368,26 @@ def build_chart_context(chart, has_birth_time):
         "Jupiter", "Saturn", "Saturn", "Jupiter",
     ]
 
+    own_signs = {
+        "Sun": {"Leo"},
+        "Moon": {"Cancer"},
+        "Mercury": {"Gemini", "Virgo"},
+        "Venus": {"Taurus", "Libra"},
+        "Mars": {"Aries", "Scorpio"},
+        "Jupiter": {"Sagittarius", "Pisces"},
+        "Saturn": {"Capricorn", "Aquarius"},
+    }
+    # Traditional Jyotisha sign conditions: own sign, exaltation, and fall.
+    exaltations = {
+        "Sun": "Aries",
+        "Moon": "Taurus",
+        "Mercury": "Virgo",
+        "Venus": "Pisces",
+        "Mars": "Capricorn",
+        "Jupiter": "Cancer",
+        "Saturn": "Libra",
+    }
+
     planet_names = [
         "Sun", "Moon", "Mercury", "Venus",
         "Mars", "Jupiter", "Saturn",
@@ -162,24 +397,62 @@ def build_chart_context(chart, has_birth_time):
         "zodiac": "tropical",
         "house_system": "whole_sign",
         "birth_time_known": has_birth_time,
+        "birth_location_known": has_birth_location,
+        "house_data_available": has_birth_time and has_birth_location,
+        "birth_time_basis": (
+            "local time with selected birthplace"
+            if has_birth_location and has_birth_time
+            else "UTC approximation without birthplace"
+            if has_birth_time
+            else "no time provided"
+        ),
         "ascendant": None,
         "chart_ruler": None,
         "planets": [],
+        "angles": [],
+        "whole_sign_houses": [],
+        "daily_sign_changes": daily_sign_changes or {},
     }
 
     # current calculation uses noon when the time is unknown
     # that does not establish a real rising sign or house placement
     # explicitly recording the uncertainty helps the model avoid
     # interpreting those temporary calculations as birth facts
-    if has_birth_time:
+    if has_birth_time and has_birth_location:
         rising_sign_index = chart.ascendant.sign_num
 
         context["ascendant"] = {
             "sign": sign_names[rising_sign_index],
             "degree": round(chart.ascendant.position, 2),
+            "house": 1,
+            "house_sign": sign_names[rising_sign_index],
+            "house_topic": HOUSE_TOPICS[1],
         }
 
         context["chart_ruler"] = sign_rulers[rising_sign_index]
+        context["whole_sign_houses"] = [
+            {
+                "house": house_number,
+                "sign": sign_names[(rising_sign_index + house_number - 1) % 12],
+                "sign_ruler": sign_rulers[
+                    (rising_sign_index + house_number - 1) % 12
+                ],
+            }
+            for house_number in range(1, 13)
+        ]
+        for name in ("Ascendant", "Descendant", "Medium_Coeli", "Imum_Coeli"):
+            angle = getattr(chart, name.lower())
+            house_number = (
+                angle.sign_num - rising_sign_index
+            ) % 12 + 1
+            context["angles"].append({
+                "name": name,
+                "sign": sign_names[angle.sign_num],
+                "degree": round(angle.position, 2),
+                "house": house_number,
+                "house_sign": sign_names[angle.sign_num],
+                "house_topic": HOUSE_TOPICS[house_number],
+            })
 
     for name in planet_names:
         # getattr(chart, "sun") is equivalent to chart.sun
@@ -188,7 +461,7 @@ def build_chart_context(chart, has_birth_time):
 
         house = None
 
-        if has_birth_time:
+        if has_birth_time and has_birth_location:
             # whole-sign houses count signs from the rising sign
             # modulo wraps the count around the end of the zodiac
             # adding one changes a zero-based index into houses 1–12
@@ -196,12 +469,33 @@ def build_chart_context(chart, has_birth_time):
                 planet.sign_num - rising_sign_index
             ) % 12 + 1
 
+        sign = sign_names[planet.sign_num]
+        exalted_sign = exaltations[name]
+        fall_sign = sign_names[(sign_names.index(exalted_sign) + 6) % 12]
+        dignities = []
+        if sign in own_signs[name]:
+            dignities.append("own sign")
+        if sign == exalted_sign:
+            dignities.append("exalted")
+        if sign == fall_sign:
+            dignities.append("debilitated")
+        house = context["whole_sign_houses"][house - 1] if house else None
         context["planets"].append({
             "name": name,
-            "sign": sign_names[planet.sign_num],
+            "sign": sign,
             "degree": round(planet.position, 2),
-            "house": house,
+            "house": house["house"] if house else None,
+            "house_sign": house["sign"] if house else None,
+            "house_topic": HOUSE_TOPICS[house["house"]] if house else None,
             "sign_ruler": sign_rulers[planet.sign_num],
+            "essential_dignity": dignities,
+            "house_strength": (
+                "angular" if house and house["house"] in {1, 4, 7, 10}
+                else "non-angular"
+            ) if house else None,
+            "possible_sign_change": (
+                daily_sign_changes or {}
+            ).get(name, []),
             "retrograde": planet.retrograde,
         })
 
