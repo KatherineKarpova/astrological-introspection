@@ -1,9 +1,16 @@
 console.log("script.js loaded");
 
-// api key for geoapify
 const geoapifyKey = JSON.parse(
     document.getElementById("geoapify-key").textContent
 );
+
+if (!geoapifyKey || typeof autocomplete === "undefined") {
+    console.error(
+        "Geoapify autocomplete is unavailable. Set GEOAPIFY_API_KEY "
+        + "and check that the Geoapify script loaded."
+    );
+    throw new Error("Geoapify autocomplete is not configured.");
+}
 
 //geoapify widget
 const birthplaceAutocomplete = new autocomplete.GeocoderAutocomplete(

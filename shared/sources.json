@@ -1,0 +1,23 @@
+[
+  {
+    "id": "P",
+    "title": "Ptolemy, Tetrabiblos",
+    "url": "https://www.gutenberg.org/ebooks/14850",
+    "scope": "Classical tropical astrology; traditional planetary significations and whole-sign-compatible foundational language.",
+    "note": "Use as historical source material, not as a scientific claim."
+  },
+  {
+    "id": "V",
+    "title": "William Lilly, Christian Astrology",
+    "url": "https://www.gutenberg.org/ebooks/65334",
+    "scope": "Traditional planetary dignities, houses, and judgment vocabulary.",
+    "note": "This is an early-modern traditional source, included for clearly labeled historical technique."
+  },
+  {
+    "id": "J",
+    "title": "Brihat Parashara Hora Shastra",
+    "url": "https://archive.org/details/brihat-parashara-hora-shastra",
+    "scope": "Jyotisha source context; use only where it agrees with the application's explicitly tropical, whole-sign model.",
+    "note": "Do not silently substitute sidereal zodiac, nakshatra, or dasha calculations."
+  }
+]

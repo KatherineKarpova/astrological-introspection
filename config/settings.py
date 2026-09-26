@@ -19,16 +19,19 @@ load_dotenv(BASE_DIR / ".env")
 
 GEOAPIFY_API_KEY = os.getenv("GEOAPIFY_API_KEY", "")
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-only-change-me")
+DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() == "true"
+ALLOWED_HOSTS = [
+    host.strip() for host in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+    if host.strip()
+]
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip() for origin in os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",")
+    if origin.strip()
+]
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-5*xbc(5spe3*f^c!bo%wsq1=cl6$ug1hg1qt_%21ym#gehv&i-'
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = []
+if not DEBUG and SECRET_KEY == "dev-only-change-me":
+    raise RuntimeError("DJANGO_SECRET_KEY must be set when Django is running in production.")
 
 
 # Application definition
@@ -119,6 +122,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 
 # Email
@@ -132,8 +136,18 @@ MAILERS = {
 
 # keep the credential on the server.
 # never put it in a django template or browser javascript.
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+# Ollama is free to run locally and exposes an OpenAI-compatible API. A hosted
+# OpenAI-compatible endpoint can be selected with the same settings.
+AI_API_KEY = os.getenv("AI_API_KEY", os.getenv("OPENAI_API_KEY", "ollama"))
+AI_BASE_URL = os.getenv("AI_BASE_URL", "http://127.0.0.1:11434/v1")
+AI_MODEL = os.getenv("AI_MODEL", os.getenv("OPENAI_MODEL", "llama3.2:3b"))
+AI_TIMEOUT_SECONDS = float(os.getenv("AI_TIMEOUT_SECONDS", "60"))
 
-# keeping the model configurable lets you change it without
-# rewriting the function that sends chat requests.
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
